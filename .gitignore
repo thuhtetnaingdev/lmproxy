@@ -1,3 +1,4 @@
-backend/llmproxy-server
+backend/llmproxy*
+!backend/llmproxy*.go
 backend/usage.db
 *.db
