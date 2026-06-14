@@ -286,7 +286,7 @@ export default function TetrisPage() {
                           title={`${p.time} · ${centsToDisplay(p.cost_cents)} · ${p.tokens.toLocaleString()} tok · ${p.model}${p.cache_hit ? " · cache hit" : ""}`}
                         >
                           {p.cost_cents >= rowCap * 0.25
-                            ? `$${centsToDollars(p.cost_cents).toFixed(0)}`
+                            ? `$${centsToDollars(p.cost_cents).toFixed(4).replace(/\.?0+$/, "")}`
                             : ""}
                         </div>
                       ))}
