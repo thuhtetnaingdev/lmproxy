@@ -88,7 +88,6 @@ cmd_uninstall() {
   echo "→ Removing files..."
   rm -rf "$INSTALL_DIR"
   sudo rm -f /usr/local/bin/llmproxy /usr/local/bin/llmproxy-server
-  sudo rm -f /usr/local/bin/llmproxy /usr/local/bin/llmproxy-server
 
   systemctl --user daemon-reload
   echo "✓ llmproxy uninstalled."
