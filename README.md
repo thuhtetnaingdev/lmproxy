@@ -24,14 +24,14 @@ DeepSeek-native LLM proxy with token usage tracking, cost analytics, and a React
 ### One-liner install
 
 ```bash
-curl -sL https://raw.githubusercontent.com/thuhtetnaingdev/lmproxy/main/install.sh | sh
+curl -sL https://raw.githubusercontent.com/thuhtetnaingdev/llmproxy/main/install.sh | sh
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/thuhtetnaingdev/lmproxy.git
-cd lmproxy
+git clone https://github.com/thuhtetnaingdev/llmproxy.git
+cd llmproxy
 
 # Development (two processes, hot reload)
 make dev
