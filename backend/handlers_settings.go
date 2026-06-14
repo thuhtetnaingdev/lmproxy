@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -127,6 +128,41 @@ func (a *API) DeleteModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// ---- Tetris settings ----
+
+const settingTetrisBudget = "tetris_daily_budget"
+
+// GET /api/settings/tetris-budget
+func (a *API) GetTetrisBudget(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireAuth(w, r); !ok {
+		return
+	}
+	budget := 0
+	if v, err := a.Store.GetSetting(settingTetrisBudget); err == nil {
+		budget, _ = strconv.Atoi(v)
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"budget": budget})
+}
+
+// PUT /api/settings/tetris-budget
+func (a *API) SetTetrisBudget(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireAuth(w, r); !ok {
+		return
+	}
+	var req struct {
+		Budget int `json:"budget"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
+		return
+	}
+	if err := a.Store.SetSetting(settingTetrisBudget, strconv.Itoa(req.Budget)); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "saved", "budget": req.Budget})
 }
 
 func maskKey(key string) string {

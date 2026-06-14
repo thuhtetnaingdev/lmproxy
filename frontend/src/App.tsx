@@ -6,15 +6,17 @@ import Requests from "@/pages/Requests";
 import Login from "@/pages/Login";
 import Settings from "@/pages/Settings";
 import Tokens from "@/pages/Tokens";
+import Tetris from "@/pages/Tetris";
 import { getJWT, clearAuth, fetchMe, logout as apiLogout, getRefreshToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { BarChart3, LayoutDashboard, List, Settings2, Key, LogOut, User, Menu, X } from "lucide-react";
+import { BarChart3, LayoutDashboard, List, Settings2, Key, LogOut, User, Menu, X, Gamepad2 } from "lucide-react";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/models", label: "Models", icon: BarChart3 },
   { to: "/requests", label: "Requests", icon: List },
   { to: "/settings", label: "Settings", icon: Settings2 },
+  { to: "/tetris", label: "Tetris", icon: Gamepad2 },
   { to: "/tokens", label: "API Tokens", icon: Key },
 ];
 
@@ -118,6 +120,7 @@ function ProtectedLayout() {
             <Route path="requests" element={<Requests />} />
             <Route path="settings" element={<Settings />} />
             <Route path="tokens" element={<Tokens />} />
+            <Route path="tetris" element={<Tetris />} />
           </Routes>
         </main>
       </div>

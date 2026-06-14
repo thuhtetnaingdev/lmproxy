@@ -85,6 +85,25 @@ func (a *API) Recent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Tetris returns game data for Token Tetris.
+func (a *API) Tetris(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireAuth(w, r); !ok {
+		return
+	}
+	budget := 0
+	if v, err := a.Store.GetSetting("tetris_daily_budget"); err == nil {
+		if n, e := strconv.Atoi(v); e == nil {
+			budget = n
+		}
+	}
+	data, err := a.Store.TetrisData(budget)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, data)
+}
+
 func queryInt(r *http.Request, key string, defaultVal int) int {
 	v := r.URL.Query().Get(key)
 	if v == "" {

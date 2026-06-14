@@ -314,6 +314,42 @@ export interface RecentResponse {
   per_page: number;
 }
 
+// ---- Tetris ----
+
+export interface TetrisPiece {
+  time: string;
+  cost_cents: number;
+  tokens: number;
+  model: string;
+  cache_hit: boolean;
+}
+
+export interface TetrisResponse {
+  today_cost_cents: number;
+  budget_cents: number;
+  percentage: number;
+  game_over: boolean;
+  streak: number;
+  best_streak: number;
+  pieces: TetrisPiece[];
+}
+
+export function fetchTetris(): Promise<TetrisResponse> {
+  return fetchJSON("/api/usage/tetris");
+}
+
+export function getTetrisBudget(): Promise<{ budget: number }> {
+  return fetchJSON("/api/settings/tetris-budget");
+}
+
+export function setTetrisBudget(budget: number): Promise<{ status: string; budget: number }> {
+  return fetchJSON("/api/settings/tetris-budget", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ budget }),
+  });
+}
+
 export function fetchRecent(page = 1, perPage = 25): Promise<RecentResponse> {
   return fetchJSON(`/api/usage/recent?page=${page}&per_page=${perPage}`);
 }

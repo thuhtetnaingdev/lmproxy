@@ -750,6 +750,153 @@ func (s *Store) UpdatePassword(userID int64, newHash string) error {
 
 // ---- Helpers ----
 
+// ---- Tetris types ----
+
+type TetrisPiece struct {
+	Time      string `json:"time"`
+	CostCents int    `json:"cost_cents"`
+	Tokens    int    `json:"tokens"`
+	Model     string `json:"model"`
+	CacheHit  bool   `json:"cache_hit"`
+}
+
+type TetrisResponse struct {
+	TodayCostCents int           `json:"today_cost_cents"`
+	BudgetCents    int           `json:"budget_cents"`
+	Percentage     float64       `json:"percentage"`
+	GameOver       bool          `json:"game_over"`
+	Streak         int           `json:"streak"`
+	BestStreak     int           `json:"best_streak"`
+	Pieces         []TetrisPiece `json:"pieces"`
+}
+
+// TetrisData returns today's request pieces and streak info for the game.
+// Budget is in hundredths-of-a-cent (same unit as cost_cents in requests).
+func (s *Store) TetrisData(budget int) (TetrisResponse, error) {
+	today := time.Now().UTC().Format("2006-01-02")
+
+	// Fetch today's requests ordered by time.
+	rows, err := s.DB.Query(`
+		SELECT requested_at, cost_cents, prompt_tokens + completion_tokens AS tokens, model,
+		       CASE WHEN cache_hit_tokens > 0 THEN 1 ELSE 0 END
+		FROM requests
+		WHERE DATE(requested_at) = ?
+		ORDER BY requested_at ASC
+	`, today)
+	if err != nil {
+		return TetrisResponse{}, err
+	}
+	defer rows.Close()
+
+	var pieces []TetrisPiece
+	var todayCostCents int
+	for rows.Next() {
+		var ts string
+		var p TetrisPiece
+		var ch int
+		if err := rows.Scan(&ts, &p.CostCents, &p.Tokens, &p.Model, &ch); err != nil {
+			return TetrisResponse{}, err
+		}
+		p.CacheHit = ch == 1
+		// Extract HH:MM from RFC3339 timestamp.
+		if t, err := time.Parse(time.RFC3339, ts); err == nil {
+			p.Time = t.Format("15:04")
+		} else {
+			p.Time = ts
+		}
+		pieces = append(pieces, p)
+		todayCostCents += p.CostCents
+	}
+	if err := rows.Err(); err != nil {
+		return TetrisResponse{}, err
+	}
+
+	pct := 0.0
+	if budget > 0 {
+		pct = float64(todayCostCents) / float64(budget) * 100
+	}
+
+	streak, best := s.computeStreak(budget, today, todayCostCents)
+
+	return TetrisResponse{
+		TodayCostCents: todayCostCents,
+		BudgetCents:    budget,
+		Percentage:     pct,
+		GameOver:       budget > 0 && todayCostCents > budget,
+		Streak:         streak,
+		BestStreak:     best,
+		Pieces:         pieces,
+	}, nil
+}
+
+// computeStreak walks backwards from today counting consecutive days <= budget.
+// Budget and daily totals are in hundredths-of-a-cent.
+func (s *Store) computeStreak(budget int, today string, todayCostCents int) (streak, best int) {
+	// Count today if not over budget.
+	if budget > 0 && todayCostCents <= budget {
+		streak = 1
+	}
+
+	// Walk backwards day-by-day.
+	d, _ := time.Parse("2006-01-02", today)
+	for {
+		d = d.AddDate(0, 0, -1)
+		day := d.Format("2006-01-02")
+		var costCents int
+		err := s.DB.QueryRow(`
+			SELECT COALESCE(SUM(cost_cents), 0)
+			FROM requests WHERE DATE(requested_at) = ?
+		`, day).Scan(&costCents)
+		if err != nil {
+			break
+		}
+		if costCents == 0 && day != today {
+			break
+		}
+		if budget > 0 && costCents <= budget {
+			streak++
+		} else {
+			break
+		}
+	}
+
+	// Best streak: scan all days with data.
+	type dayTotal struct {
+		day       string
+		costCents int
+	}
+	var days []dayTotal
+	rows, err := s.DB.Query(`
+		SELECT DATE(requested_at) AS day, SUM(cost_cents) AS cost_cents
+		FROM requests GROUP BY day ORDER BY day ASC
+	`)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var dt dayTotal
+			if rows.Scan(&dt.day, &dt.costCents) == nil {
+				days = append(days, dt)
+			}
+		}
+
+		cur := 0
+		for _, dt := range days {
+			if budget > 0 && dt.costCents <= budget {
+				cur++
+				if cur > best {
+					best = cur
+				}
+			} else {
+				cur = 0
+			}
+		}
+	}
+	if streak > best {
+		best = streak
+	}
+	return
+}
+
 // centsToDisplay converts hundredths-of-a-cent (1 = $0.0001) to a dollar string.
 func centsToDisplay(c int) string {
 	dollars := float64(c) / 10000.0

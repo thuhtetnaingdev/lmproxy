@@ -95,6 +95,7 @@ func main() {
 		r.Get("/api/usage/daily", api.Daily)
 		r.Get("/api/usage/top-days", api.TopDays)
 		r.Get("/api/usage/recent", api.Recent)
+		r.Get("/api/usage/tetris", api.Tetris)
 
 		r.Get("/api/tokens", api.ListTokens)
 		r.Post("/api/tokens", api.CreateToken)
@@ -107,6 +108,9 @@ func main() {
 		r.Post("/api/settings/models", api.CreateModel)
 		r.Put("/api/settings/models/{model}", api.UpdateModel)
 		r.Delete("/api/settings/models/{model}", api.DeleteModel)
+
+		r.Get("/api/settings/tetris-budget", api.GetTetrisBudget)
+		r.Put("/api/settings/tetris-budget", api.SetTetrisBudget)
 	})
 
 	// Serve frontend static files (SPA fallback to index.html).
