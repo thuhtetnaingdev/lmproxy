@@ -1,0 +1,64 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build frontend
+        run: |
+          npm --prefix frontend ci
+          npm --prefix frontend run build
+
+      - name: Build backend
+        run: |
+          cd backend
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o llmproxy .
+
+      - name: Package
+        run: |
+          mkdir -p dist/frontend
+          cp backend/llmproxy dist/
+          cp -r frontend/dist dist/frontend/
+          cp install.sh dist/ 2>/dev/null || true
+          cd dist
+          tar czf ../llmproxy-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: llmproxy-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: llmproxy-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: llmproxy-*
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: llmproxy-*.tar.gz
+          generate_release_notes: true
