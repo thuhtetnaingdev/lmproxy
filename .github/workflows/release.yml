@@ -30,14 +30,15 @@ jobs:
       - name: Build backend
         run: |
           cd backend
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o llmproxy .
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o llmproxy-server .
 
       - name: Package
         run: |
           mkdir -p dist/frontend
-          cp backend/llmproxy dist/
+          cp backend/llmproxy-server dist/
+          cp scripts/llmproxy dist/
+          chmod +x dist/llmproxy dist/llmproxy-server
           cp -r frontend/dist dist/frontend/
-          cp install.sh dist/ 2>/dev/null || true
           cd dist
           tar czf ../llmproxy-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz .
 

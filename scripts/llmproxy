@@ -1,0 +1,106 @@
+#!/bin/sh
+set -e
+
+SERVICE="llmproxy"
+INSTALL_DIR="$HOME/.lmproxy"
+REPO="thuhtetnaingdev/lmproxy"
+
+cmd_serve() {
+  cd "$INSTALL_DIR"
+  export STATIC_DIR="$INSTALL_DIR/frontend/dist"
+  exec "$INSTALL_DIR/llmproxy-server" "$@"
+}
+
+cmd_start() {
+  if systemctl --user is-active "$SERVICE" >/dev/null 2>&1; then
+    echo "llmproxy is already running."
+  else
+    systemctl --user start "$SERVICE"
+    echo "llmproxy started."
+  fi
+}
+
+cmd_stop() {
+  systemctl --user stop "$SERVICE" 2>/dev/null || true
+  echo "llmproxy stopped."
+}
+
+cmd_restart() {
+  systemctl --user restart "$SERVICE"
+  echo "llmproxy restarted."
+}
+
+cmd_status() {
+  systemctl --user status "$SERVICE" 2>/dev/null || echo "llmproxy is not running."
+}
+
+cmd_logs() {
+  journalctl --user -u "$SERVICE" -f
+}
+
+cmd_update() {
+  echo "→ Checking for latest release..."
+  LATEST=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": "\(.*\)".*/\1/')
+  if [ -z "$LATEST" ]; then
+    echo "Could not determine latest release."
+    exit 1
+  fi
+
+  CURRENT=""
+  if [ -f "$INSTALL_DIR/VERSION" ]; then
+    CURRENT=$(cat "$INSTALL_DIR/VERSION")
+  fi
+
+  if [ "$LATEST" = "$CURRENT" ]; then
+    echo "✓ Already at latest version ($LATEST)."
+    exit 0
+  fi
+
+  echo "→ Updating from ${CURRENT:-none} to $LATEST..."
+
+  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+  ARCH=$(uname -m)
+  case "$ARCH" in
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+  esac
+
+  TARBALL="llmproxy-${OS}-${ARCH}.tar.gz"
+  URL="https://github.com/$REPO/releases/download/${LATEST}/${TARBALL}"
+
+  curl -sL "$URL" -o "/tmp/$TARBALL"
+  tar xzf "/tmp/$TARBALL" -C "$INSTALL_DIR"
+  rm "/tmp/$TARBALL"
+  echo "$LATEST" > "$INSTALL_DIR/VERSION"
+
+  # Reload systemd if unit changed.
+  systemctl --user daemon-reload
+  cmd_restart
+  echo "✓ Updated to $LATEST."
+}
+
+cmd_uninstall() {
+  echo "→ Stopping and disabling service..."
+  systemctl --user stop "$SERVICE" 2>/dev/null || true
+  systemctl --user disable "$SERVICE" 2>/dev/null || true
+  rm -f "$HOME/.config/systemd/user/$SERVICE.service"
+
+  echo "→ Removing files..."
+  rm -rf "$INSTALL_DIR"
+  sudo rm -f /usr/local/bin/llmproxy /usr/local/bin/llmproxy-server
+
+  systemctl --user daemon-reload
+  echo "✓ llmproxy uninstalled."
+}
+
+case "${1:-serve}" in
+  serve)   shift; cmd_serve "$@" ;;
+  start)   cmd_start ;;
+  stop)    cmd_stop ;;
+  restart) cmd_restart ;;
+  status)  cmd_status ;;
+  logs)    cmd_logs ;;
+  update)  cmd_update ;;
+  uninstall) cmd_uninstall ;;
+  *)       echo "Usage: llmproxy {serve|start|stop|restart|status|logs|update|uninstall}" ;;
+esac

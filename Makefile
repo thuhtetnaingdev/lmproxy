@@ -18,7 +18,7 @@ dev:
 # ── Build ────────────────────────────────────────────────────
 
 build-backend:
-	cd backend && go build -o llmproxy .
+	cd backend && go build -o llmproxy-server .
 
 build-frontend:
 	cd frontend && npm run build
@@ -28,10 +28,10 @@ build: build-frontend build-backend
 # ── Production (single binary, single port) ──────────────────
 
 start: build
-	cd backend && STATIC_DIR=../frontend/dist ./llmproxy
+	cd backend && STATIC_DIR=../frontend/dist ./llmproxy-server
 
 # ── Clean ────────────────────────────────────────────────────
 
 clean:
-	rm -f backend/llmproxy
+	rm -f backend/llmproxy-server
 	rm -rf frontend/dist
