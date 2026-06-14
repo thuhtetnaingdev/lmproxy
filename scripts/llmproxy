@@ -2,8 +2,8 @@
 set -e
 
 SERVICE="llmproxy"
-INSTALL_DIR="$HOME/.lmproxy"
-REPO="thuhtetnaingdev/lmproxy"
+INSTALL_DIR="$HOME/.llmproxy"
+REPO="thuhtetnaingdev/llmproxy"
 
 cmd_serve() {
   cd "$INSTALL_DIR"
