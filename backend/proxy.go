@@ -45,8 +45,6 @@ func (p *Proxy) HandleModels(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"object": "list",
 		"data": []map[string]any{
-			{"id": "deepseek-chat", "object": "model", "owned_by": "deepseek"},
-			{"id": "deepseek-reasoner", "object": "model", "owned_by": "deepseek"},
 			{"id": "deepseek-v4-flash", "object": "model", "owned_by": "deepseek"},
 			{"id": "deepseek-v4-pro", "object": "model", "owned_by": "deepseek"},
 		},

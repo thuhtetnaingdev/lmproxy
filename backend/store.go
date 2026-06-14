@@ -201,10 +201,8 @@ func (s *Store) SeedPricing() error {
 		input, output, cacheHit int
 	}{
 		// https://api-docs.deepseek.com/quick_start/pricing
-		{"deepseek-chat", 1400, 2800, 100},       // $0.14/$0.28 input/output, $0.01 cache hit
-		{"deepseek-reasoner", 5500, 21900, 1400}, // $0.55/$2.19 input/output, $0.14 cache hit
-		{"deepseek-v4-flash", 1400, 2800, 100},   // same as chat
-		{"deepseek-v4-pro", 5500, 21900, 1400},   // same as reasoner
+		{"deepseek-v4-flash", 1400, 2800, 28},     // $0.14 input, $0.28 output, $0.0028 cache hit
+		{"deepseek-v4-pro", 4350, 8700, 36},      // $0.435 input, $0.87 output, $0.003625 cache hit
 	}
 	for _, r := range rows {
 		_, err := s.DB.Exec(
@@ -228,7 +226,7 @@ func (s *Store) GetPricing(model string) (Pricing, error) {
 	).Scan(&p.InputPerMillion, &p.OutputPerMillion, &p.CacheHitPerMillion)
 	if err == sql.ErrNoRows {
 		// Default fallback — assume deepseek-chat rates
-		return Pricing{InputPerMillion: 1400, OutputPerMillion: 2800, CacheHitPerMillion: 100}, nil
+		return Pricing{InputPerMillion: 1400, OutputPerMillion: 2800, CacheHitPerMillion: 28}, nil
 	}
 	return p, err
 }
@@ -281,8 +279,8 @@ func (s *Store) Summary() (SummaryResponse, error) {
 	}
 
 	// Cache cost breakdown: how much was spent on cache-hit vs cache-miss input tokens
-	r.CacheHitCostCents = estimateCost(r.CacheHitTokens, 100)   // rough: cache-hit rate
-	r.CacheMissCostCents = estimateCost(r.CacheMissTokens, 1400) // rough: cache-miss rate
+	r.CacheHitCostCents = estimateCost(r.CacheHitTokens, 28)    // rough: cache-hit rate ($0.0028)
+	r.CacheMissCostCents = estimateCost(r.CacheMissTokens, 1400) // rough: cache-miss rate ($0.14)
 
 	// Cache savings: if all cache-hit tokens had been cache-miss instead
 	hypotheticalMissCost := estimateCost(r.CacheHitTokens, 1400)
@@ -293,7 +291,7 @@ func (s *Store) Summary() (SummaryResponse, error) {
 	r.CacheSavingsDisplay = centsToDisplay(r.CacheSavingsCents)
 
 	// Output cost: approximated at chat output rate
-	r.OutputCostCents = estimateCost(r.TotalCompletionTokens, 2800)
+	r.OutputCostCents = estimateCost(r.TotalCompletionTokens, 2800) // $0.28/1M output
 	r.OutputCostDisplay = centsToDisplay(r.OutputCostCents)
 
 	// Avg $/1M tokens
@@ -826,5 +824,5 @@ func (s *Store) LookupPricing(fullModel string) (Pricing, error) {
 		return best, nil
 	}
 	// Default fallback
-	return Pricing{InputPerMillion: 1400, OutputPerMillion: 2800, CacheHitPerMillion: 100}, nil
+	return Pricing{InputPerMillion: 1400, OutputPerMillion: 2800, CacheHitPerMillion: 28}, nil
 }
